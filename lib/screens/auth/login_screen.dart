@@ -76,6 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
@@ -131,6 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         border: const OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
                       autocorrect: false,
                       autofillHints: const [AutofillHints.email],
                       validator: (v) =>
@@ -144,6 +146,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         border: const OutlineInputBorder(),
                       ),
                       obscureText: true,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _submit(),
                       autofillHints: const [AutofillHints.password],
                       validator: (v) =>
                           v == null || v.isEmpty ? l10n.enterYourPasswordValidator : null,
