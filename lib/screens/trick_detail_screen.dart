@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations_extension.dart';
 import '../l10n/enum_localizations.dart';
 import '../models/screen_data.dart';
@@ -18,6 +17,7 @@ import '../utils/date_formatters.dart';
 import '../utils/difficulty_tier.dart';
 import '../utils/network_utils.dart';
 import '../utils/safe_state.dart';
+import '../utils/video_link.dart';
 import '../utils/youtube_utils.dart';
 import '../widgets/app_dialogs.dart';
 import '../video/offline_video_service.dart';
@@ -178,19 +178,6 @@ class _TrickDetailScreenState extends State<TrickDetailScreen>
     showInfoSnackBar(message);
   }
 
-  Future<void> _openVideo(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    final launched =
-        await launchUrl(uri, mode: LaunchMode.externalApplication) ||
-            await launchUrl(uri, mode: LaunchMode.platformDefault);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.couldNotOpenVideoLink)),
-      );
-    }
-  }
-
   Widget _buildVideoPlayer(String url, int? start, int? end) {
     final (:id, :isPortrait) = parseYouTubeVideo(url);
     if (id != null && YoutubeLoopPlayer.supported) {
@@ -202,7 +189,7 @@ class _TrickDetailScreenState extends State<TrickDetailScreen>
       );
     }
     return FilledButton.icon(
-      onPressed: () => _openVideo(url),
+      onPressed: () => openVideoLink(context, url),
       icon: const Icon(Icons.play_circle_outline),
       label: Text(context.l10n.watchVideoButton),
     );

@@ -13,6 +13,7 @@ import '../services/feedback_service.dart';
 import '../services/tips_service.dart';
 import '../services/tricks_service.dart';
 import '../utils/date_formatters.dart';
+import '../utils/video_link.dart';
 import 'submit_tip_screen.dart';
 import 'submit_trick_screen.dart';
 
@@ -27,7 +28,8 @@ ButtonStyle _approveButtonStyle(ThemeData theme) => FilledButton.styleFrom(
 ButtonStyle _rejectButtonStyle(ThemeData theme) =>
     FilledButton.styleFrom(backgroundColor: theme.colorScheme.error);
 
-Widget _labelRow(String label, String value) => Padding(
+Widget _labelRow(String label, String value, {Color? valueColor}) =>
+    Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text.rich(
         TextSpan(
@@ -35,11 +37,20 @@ Widget _labelRow(String label, String value) => Padding(
             TextSpan(
                 text: '$label: ',
                 style: const TextStyle(fontWeight: FontWeight.w600)),
-            TextSpan(text: value),
+            TextSpan(text: value, style: TextStyle(color: valueColor)),
           ],
         ),
       ),
     );
+
+Widget _videoLinkTapTarget(BuildContext context, String value,
+    Widget Function(Color? linkColor) buildRow) {
+  if (parseVideoUri(value) == null) return buildRow(null);
+  return InkWell(
+    onTap: () => openVideoLink(context, value),
+    child: buildRow(Theme.of(context).colorScheme.primary),
+  );
+}
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -382,7 +393,13 @@ class _PendingTrickCard extends StatelessWidget {
                 if (trick.description != null)
                   _labelRow(l10n.descriptionLabel, trick.description!),
                 if (trick.tips != null) _labelRow(l10n.tipsLabel, trick.tips!),
-                if (trick.videoLink != null) _labelRow(l10n.videoLabel, trick.videoLink!),
+                if (trick.videoLink != null)
+                  _videoLinkTapTarget(
+                    context,
+                    trick.videoLink!,
+                    (color) => _labelRow(l10n.videoLabel, trick.videoLink!,
+                        valueColor: color),
+                  ),
                 const SizedBox(height: 12),
                 OverflowBar(
                   spacing: 8,
@@ -432,7 +449,7 @@ class _PendingSuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
-    final deltaRows = _buildDeltaRows(l10n, originalTrick);
+    final deltaRows = _buildDeltaRows(context, l10n, originalTrick);
 
     return Card(
       child: ExpansionTile(
@@ -472,7 +489,8 @@ class _PendingSuggestionCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildDeltaRows(AppLocalizations l10n, Trick? orig) {
+  List<Widget> _buildDeltaRows(
+      BuildContext context, AppLocalizations l10n, Trick? orig) {
     final s = suggestion;
     final rows = <Widget>[];
 
@@ -503,7 +521,12 @@ class _PendingSuggestionCard extends StatelessWidget {
       rows.add(_diffRow(l10n.tipsLabel, orig?.tips, s.tips));
     }
     if (s.videoLink != null) {
-      rows.add(_diffRow(l10n.videoLabel, orig?.videoLink, s.videoLink));
+      rows.add(_videoLinkTapTarget(
+        context,
+        s.videoLink!,
+        (color) => _diffRow(l10n.videoLabel, orig?.videoLink, s.videoLink,
+            newColor: color),
+      ));
     }
     if (s.startPositionId != null) {
       rows.add(_diffRow(l10n.startLabel, orig?.startPositionName, s.startPositionName));
@@ -529,7 +552,8 @@ class _PendingSuggestionCard extends StatelessWidget {
     return rows;
   }
 
-  Widget _diffRow(String label, String? oldVal, String? newVal) {
+  Widget _diffRow(String label, String? oldVal, String? newVal,
+      {Color? newColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text.rich(
@@ -545,7 +569,7 @@ class _PendingSuggestionCard extends StatelessWidget {
               ),
             TextSpan(
               text: newVal ?? '—',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600, color: newColor),
             ),
           ],
         ),
@@ -705,5 +729,4 @@ class _PendingFeedbackCard extends StatelessWidget {
       ),
     );
   }
-
 }
