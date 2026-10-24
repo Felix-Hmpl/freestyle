@@ -41,6 +41,34 @@ Widget _labelRow(String label, String value) => Padding(
       ),
     );
 
+Uri? _videoUri(String value) {
+  final uri = Uri.tryParse(value.trim());
+  return uri != null &&
+          (uri.scheme == 'https' || uri.scheme == 'http') &&
+          uri.host.isNotEmpty
+      ? uri
+      : null;
+}
+
+Future<void> _openVideoLink(BuildContext context, Uri uri) async {
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication) ||
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+  if (!launched && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.l10n.couldNotOpenVideoLink)),
+    );
+  }
+}
+
+Widget _videoLinkTapTarget(BuildContext context, String value, Widget content) {
+  final uri = _videoUri(value);
+  if (uri == null) return content;
+  return InkWell(
+    onTap: () => _openVideoLink(context, uri),
+    child: content,
+  );
+}
+
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
 
@@ -382,7 +410,12 @@ class _PendingTrickCard extends StatelessWidget {
                 if (trick.description != null)
                   _labelRow(l10n.descriptionLabel, trick.description!),
                 if (trick.tips != null) _labelRow(l10n.tipsLabel, trick.tips!),
-                if (trick.videoLink != null) _labelRow(l10n.videoLabel, trick.videoLink!),
+                if (trick.videoLink != null)
+                  _videoLinkTapTarget(
+                    context,
+                    trick.videoLink!,
+                    _labelRow(l10n.videoLabel, trick.videoLink!),
+                  ),
                 const SizedBox(height: 12),
                 OverflowBar(
                   spacing: 8,
@@ -432,7 +465,7 @@ class _PendingSuggestionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = context.l10n;
-    final deltaRows = _buildDeltaRows(l10n, originalTrick);
+    final deltaRows = _buildDeltaRows(context, l10n, originalTrick);
 
     return Card(
       child: ExpansionTile(
@@ -472,7 +505,8 @@ class _PendingSuggestionCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildDeltaRows(AppLocalizations l10n, Trick? orig) {
+  List<Widget> _buildDeltaRows(
+      BuildContext context, AppLocalizations l10n, Trick? orig) {
     final s = suggestion;
     final rows = <Widget>[];
 
@@ -503,7 +537,11 @@ class _PendingSuggestionCard extends StatelessWidget {
       rows.add(_diffRow(l10n.tipsLabel, orig?.tips, s.tips));
     }
     if (s.videoLink != null) {
-      rows.add(_diffRow(l10n.videoLabel, orig?.videoLink, s.videoLink));
+      rows.add(_videoLinkTapTarget(
+        context,
+        s.videoLink!,
+        _diffRow(l10n.videoLabel, orig?.videoLink, s.videoLink),
+      ));
     }
     if (s.startPositionId != null) {
       rows.add(_diffRow(l10n.startLabel, orig?.startPositionName, s.startPositionName));
@@ -705,5 +743,4 @@ class _PendingFeedbackCard extends StatelessWidget {
       ),
     );
   }
-
 }
