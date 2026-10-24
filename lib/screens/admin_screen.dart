@@ -13,6 +13,7 @@ import '../services/feedback_service.dart';
 import '../services/tips_service.dart';
 import '../services/tricks_service.dart';
 import '../utils/date_formatters.dart';
+import '../utils/video_link.dart';
 import 'submit_tip_screen.dart';
 import 'submit_trick_screen.dart';
 
@@ -27,7 +28,8 @@ ButtonStyle _approveButtonStyle(ThemeData theme) => FilledButton.styleFrom(
 ButtonStyle _rejectButtonStyle(ThemeData theme) =>
     FilledButton.styleFrom(backgroundColor: theme.colorScheme.error);
 
-Widget _labelRow(String label, String value) => Padding(
+Widget _labelRow(String label, String value, {Color? valueColor}) =>
+    Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text.rich(
         TextSpan(
@@ -35,37 +37,18 @@ Widget _labelRow(String label, String value) => Padding(
             TextSpan(
                 text: '$label: ',
                 style: const TextStyle(fontWeight: FontWeight.w600)),
-            TextSpan(text: value),
+            TextSpan(text: value, style: TextStyle(color: valueColor)),
           ],
         ),
       ),
     );
 
-Uri? _videoUri(String value) {
-  final uri = Uri.tryParse(value.trim());
-  return uri != null &&
-          (uri.scheme == 'https' || uri.scheme == 'http') &&
-          uri.host.isNotEmpty
-      ? uri
-      : null;
-}
-
-Future<void> _openVideoLink(BuildContext context, Uri uri) async {
-  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication) ||
-      await launchUrl(uri, mode: LaunchMode.platformDefault);
-  if (!launched && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.couldNotOpenVideoLink)),
-    );
-  }
-}
-
-Widget _videoLinkTapTarget(BuildContext context, String value, Widget content) {
-  final uri = _videoUri(value);
-  if (uri == null) return content;
+Widget _videoLinkTapTarget(BuildContext context, String value,
+    Widget Function(Color? linkColor) buildRow) {
+  if (parseVideoUri(value) == null) return buildRow(null);
   return InkWell(
-    onTap: () => _openVideoLink(context, uri),
-    child: content,
+    onTap: () => openVideoLink(context, value),
+    child: buildRow(Theme.of(context).colorScheme.primary),
   );
 }
 
@@ -414,7 +397,8 @@ class _PendingTrickCard extends StatelessWidget {
                   _videoLinkTapTarget(
                     context,
                     trick.videoLink!,
-                    _labelRow(l10n.videoLabel, trick.videoLink!),
+                    (color) => _labelRow(l10n.videoLabel, trick.videoLink!,
+                        valueColor: color),
                   ),
                 const SizedBox(height: 12),
                 OverflowBar(
@@ -540,7 +524,8 @@ class _PendingSuggestionCard extends StatelessWidget {
       rows.add(_videoLinkTapTarget(
         context,
         s.videoLink!,
-        _diffRow(l10n.videoLabel, orig?.videoLink, s.videoLink),
+        (color) => _diffRow(l10n.videoLabel, orig?.videoLink, s.videoLink,
+            newColor: color),
       ));
     }
     if (s.startPositionId != null) {
@@ -567,7 +552,8 @@ class _PendingSuggestionCard extends StatelessWidget {
     return rows;
   }
 
-  Widget _diffRow(String label, String? oldVal, String? newVal) {
+  Widget _diffRow(String label, String? oldVal, String? newVal,
+      {Color? newColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text.rich(
@@ -583,7 +569,7 @@ class _PendingSuggestionCard extends StatelessWidget {
               ),
             TextSpan(
               text: newVal ?? '—',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600, color: newColor),
             ),
           ],
         ),
