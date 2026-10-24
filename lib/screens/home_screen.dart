@@ -309,6 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           if (AuthService.isLoggedIn)
             Badge(
+              offset: const Offset(-6, 4),
               isLabelVisible: _unreadFeedback > 0,
               label: Text(_unreadFeedback.toString()),
               child: IconButton(
@@ -322,6 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           if (_profile?.canEditTricks == true)
             Badge(
+              offset: const Offset(-8, 6),
               isLabelVisible: _adminUnreadFeedback > 0,
               label: Text(_adminUnreadFeedback.toString()),
               child: IconButton(
@@ -334,6 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           Badge(
+            offset: const Offset(-8, 6),
             isLabelVisible: _filter.isActive,
             label: Text(_filter.activeCount.toString()),
             child: IconButton(
