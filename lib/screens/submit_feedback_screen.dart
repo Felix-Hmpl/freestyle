@@ -79,7 +79,7 @@ class _SubmitFeedbackScreenState extends State<SubmitFeedbackScreen> {
             ),
           ),
         );
-        context.pop();
+        context.go('/');
       }
     } catch (e) {
       debugPrint('Feedback submit failed: $e');
