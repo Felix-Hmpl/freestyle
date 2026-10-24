@@ -74,15 +74,14 @@ class FeedbackService {
     await _client.storage.from(_bucket).remove(paths);
   }
 
-  // Admin queue: threads waiting on an admin first, then ones the user has
-  // already been answered on and may still reply to.
+  // Admin queue: open threads, newest message first.
   static Future<List<FeedbackItem>> getPendingFeedback() async {
     final data = await _client
         .from('feedback')
         .select(_threadSelect)
         .inFilter('status',
             [FeedbackItem.statusNew, FeedbackItem.statusAnswered])
-        .order('last_message_at', ascending: true);
+        .order('last_message_at', ascending: false);
     return (data as List)
         .map((e) => FeedbackItem.fromJson(e as Map<String, dynamic>))
         .toList();
