@@ -33,7 +33,9 @@ class _MyFeedbackScreenState extends State<MyFeedbackScreen> with SafeStateMixin
     return FeedbackService.getMyThreads(profile.intId);
   }
 
-  void _refresh() => safeSetState(() => _future = _load());
+  void _refresh() => safeSetState(() {
+        _future = _load();
+      });
 
   Future<void> _openThread(int id) async {
     await context.push<void>('/feedback/mine/$id');

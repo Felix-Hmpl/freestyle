@@ -65,7 +65,9 @@ class _FeedbackThreadScreenState extends State<FeedbackThreadScreen>
     );
   }
 
-  void _refresh() => safeSetState(() => _future = _load());
+  void _refresh() => safeSetState(() {
+        _future = _load();
+      });
 
   Future<void> _pick() async {
     final picked = await pickImageAttachments(_picker);
