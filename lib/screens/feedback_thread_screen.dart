@@ -202,6 +202,9 @@ class _ThreadView {
   });
 }
 
+/// Height of the empty text field; the attach and send buttons match it.
+const double _controlSize = 48;
+
 class _ReplyComposer extends StatelessWidget {
   final TextEditingController controller;
   final List<PickedAttachment> attachments;
@@ -240,6 +243,9 @@ class _ReplyComposer extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.attach_file),
                   tooltip: l10n.attachFileButton,
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(_controlSize, _controlSize),
+                  ),
                   onPressed: sending ? null : onPick,
                 ),
                 Expanded(
@@ -249,23 +255,40 @@ class _ReplyComposer extends StatelessWidget {
                     maxLines: 5,
                     maxLength: 2000,
                     textCapitalization: TextCapitalization.sentences,
+                    // Fixed line height + padding make the empty field exactly
+                    // _controlSize tall, matching the buttons beside it.
+                    strutStyle: const StrutStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                      forceStrutHeight: true,
+                    ),
                     decoration: InputDecoration(
                       hintText: l10n.feedbackReplyHint,
                       border: const OutlineInputBorder(),
                       counterText: '',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: (_controlSize - 24) / 2,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
+                IconButton.filled(
                   onPressed: sending ? null : onSend,
-                  child: sending
+                  tooltip: l10n.feedbackSendReply,
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(_controlSize, _controlSize),
+                    shape: const CircleBorder(),
+                  ),
+                  icon: sending
                       ? const SizedBox(
                           height: 18,
                           width: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(l10n.feedbackSendReply),
+                      : const Icon(Icons.send),
                 ),
               ],
             ),
