@@ -110,13 +110,6 @@ class _FeedbackThreadScreenState extends State<FeedbackThreadScreen>
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Chip(
-                        label: Text(feedbackStatusLabel(context, view.thread)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
                     FeedbackMessageList(
                       thread: view.thread,
                       attachments: view.attachments,
