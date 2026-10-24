@@ -69,6 +69,13 @@ class AppRouter {
         ),
       ),
       GoRoute(path: '/admin', builder: (_, __) => const AdminScreen()),
+      GoRoute(
+        path: '/admin/feedback/:id',
+        builder: (_, state) => FeedbackThreadScreen(
+          feedbackId: int.parse(state.pathParameters['id']!),
+          adminMode: true,
+        ),
+      ),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

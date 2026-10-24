@@ -8,11 +8,19 @@ import '../services/feedback_service.dart';
 import '../utils/safe_state.dart';
 import '../widgets/attachment_picker.dart';
 import '../widgets/feedback_message_list.dart';
+import 'admin_screen.dart' show approveButtonStyle, rejectButtonStyle;
 
 class FeedbackThreadScreen extends StatefulWidget {
   final int feedbackId;
 
-  const FeedbackThreadScreen({super.key, required this.feedbackId});
+  /// Admins get the review actions pinned above the conversation.
+  final bool adminMode;
+
+  const FeedbackThreadScreen({
+    super.key,
+    required this.feedbackId,
+    this.adminMode = false,
+  });
 
   @override
   State<FeedbackThreadScreen> createState() => _FeedbackThreadScreenState();
@@ -43,7 +51,7 @@ class _FeedbackThreadScreenState extends State<FeedbackThreadScreen>
     final profile = await AuthService.getCurrentProfile();
     final thread = await FeedbackService.getThread(widget.feedbackId);
     final attachments = await FeedbackService.signAttachments([thread]);
-    if (thread.hasUnread) {
+    if (!widget.adminMode && thread.hasUnread) {
       try {
         await FeedbackService.markRead(thread.id);
       } catch (e) {
@@ -89,9 +97,20 @@ class _FeedbackThreadScreenState extends State<FeedbackThreadScreen>
     }
   }
 
+  Future<void> _resolve(FeedbackItem thread, String status) async {
+    try {
+      await FeedbackService.resolveFeedback(thread, status);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      debugPrint('Feedback resolve failed: $e');
+      if (mounted) showErrorSnackBar(context.l10n.feedbackResolveError);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.feedbackThreadTitle(widget.feedbackId))),
       body: FutureBuilder<_ThreadView>(
@@ -106,6 +125,33 @@ class _FeedbackThreadScreenState extends State<FeedbackThreadScreen>
           final view = snap.data!;
           return Column(
             children: [
+              if (widget.adminMode && !view.thread.isClosed) ...[
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => _resolve(view.thread, 'reviewed'),
+                          icon: const Icon(Icons.check, size: 18),
+                          label: Text(l10n.markReviewedButton),
+                          style: approveButtonStyle(theme),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () => _resolve(view.thread, 'dismissed'),
+                          icon: const Icon(Icons.close, size: 18),
+                          label: Text(l10n.dismissButton),
+                          style: rejectButtonStyle(theme),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+              ],
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(16),

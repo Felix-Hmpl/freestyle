@@ -85,8 +85,6 @@ class AdminData {
   final Map<int, Trick> originalTricks;
   final List<Tip> pendingTips;
   final List<FeedbackItem> pendingFeedback;
-  // Keyed by feedback message id.
-  final Map<int, List<FeedbackAttachment>> feedbackAttachments;
   final Profile? profile;
 
   const AdminData({
@@ -95,7 +93,6 @@ class AdminData {
     required this.originalTricks,
     required this.pendingTips,
     this.pendingFeedback = const [],
-    this.feedbackAttachments = const {},
     this.profile,
   });
 }

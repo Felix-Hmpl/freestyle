@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations_extension.dart';
 import '../l10n/enum_localizations.dart';
 import '../models/approval_status.dart';
@@ -13,11 +14,10 @@ import '../services/tips_service.dart';
 import '../services/tricks_service.dart';
 import '../utils/date_formatters.dart';
 import '../utils/video_link.dart';
-import '../widgets/feedback_message_list.dart';
 import 'submit_tip_screen.dart';
 import 'submit_trick_screen.dart';
 
-ButtonStyle _approveButtonStyle(ThemeData theme) => FilledButton.styleFrom(
+ButtonStyle approveButtonStyle(ThemeData theme) => FilledButton.styleFrom(
       backgroundColor: theme.brightness == Brightness.dark
           ? Colors.green.shade400
           : Colors.green.shade700,
@@ -25,7 +25,7 @@ ButtonStyle _approveButtonStyle(ThemeData theme) => FilledButton.styleFrom(
           theme.brightness == Brightness.dark ? Colors.black : Colors.white,
     );
 
-ButtonStyle _rejectButtonStyle(ThemeData theme) =>
+ButtonStyle rejectButtonStyle(ThemeData theme) =>
     FilledButton.styleFrom(backgroundColor: theme.colorScheme.error);
 
 Widget _labelRow(String label, String value, {Color? valueColor}) =>
@@ -90,14 +90,12 @@ class _AdminScreenState extends State<AdminScreen> {
     final trickIds = suggestions.map((s) => s.trickId).toSet().toList();
     final origList = await TricksService.getTricksByIds(trickIds);
     final originalTricks = {for (final t in origList) t.id: t};
-    final feedbackAttachments = await FeedbackService.signAttachments(feedback);
     return AdminData(
       pendingTricks: tricks,
       pendingSuggestions: suggestions,
       originalTricks: originalTricks,
       pendingTips: tips,
       pendingFeedback: feedback,
-      feedbackAttachments: feedbackAttachments,
       profile: profile,
     );
   }
@@ -127,46 +125,6 @@ class _AdminScreenState extends State<AdminScreen> {
   Future<void> _declineTip(int id) async {
     await TipsService.deleteTip(id);
     _refresh();
-  }
-
-  Future<void> _resolveFeedback(FeedbackItem item, String status) async {
-    try {
-      await FeedbackService.resolveFeedback(item, status);
-      _refresh();
-    } catch (e) {
-      debugPrint('Feedback resolve failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.feedbackResolveError),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _replyToFeedback(FeedbackItem item, String body) async {
-    final profile = await AuthService.getCurrentProfile();
-    if (profile == null) return;
-    try {
-      await FeedbackService.postMessage(
-        feedbackId: item.id,
-        authorId: profile.intId,
-        body: body,
-      );
-      _refresh();
-    } catch (e) {
-      debugPrint('Feedback reply failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.feedbackReplyError),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _addPosition(BuildContext context) async {
@@ -255,7 +213,6 @@ class _AdminScreenState extends State<AdminScreen> {
     final suggestions = snap.data!.pendingSuggestions;
     final tips = snap.data!.pendingTips;
     final feedback = snap.data!.pendingFeedback;
-    final feedbackAttachments = snap.data!.feedbackAttachments;
 
     if (tricks.isEmpty && suggestions.isEmpty && tips.isEmpty && feedback.isEmpty) {
       return RefreshIndicator(
@@ -351,11 +308,10 @@ class _AdminScreenState extends State<AdminScreen> {
           if (i > 0) const SizedBox(height: 12),
           _PendingFeedbackCard(
             item: feedback[i],
-            attachments: feedbackAttachments,
-            adminId: profile!.intId,
-            onReply: (body) => _replyToFeedback(feedback[i], body),
-            onMarkReviewed: () => _resolveFeedback(feedback[i], 'reviewed'),
-            onDismiss: () => _resolveFeedback(feedback[i], 'dismissed'),
+            onTap: () async {
+              await context.push<void>('/admin/feedback/${feedback[i].id}');
+              _refresh();
+            },
           ),
         ],
       ],
@@ -426,13 +382,13 @@ class _PendingTrickCard extends StatelessWidget {
                       onPressed: onApprove,
                       icon: const Icon(Icons.check, size: 18),
                       label: Text(l10n.approveButton),
-                      style: _approveButtonStyle(theme),
+                      style: approveButtonStyle(theme),
                     ),
                     FilledButton.icon(
                       onPressed: onReject,
                       icon: const Icon(Icons.close, size: 18),
                       label: Text(l10n.rejectButton),
-                      style: _rejectButtonStyle(theme),
+                      style: rejectButtonStyle(theme),
                     ),
                   ],
                 ),
@@ -484,13 +440,13 @@ class _PendingSuggestionCard extends StatelessWidget {
                       onPressed: onApprove,
                       icon: const Icon(Icons.check, size: 18),
                       label: Text(l10n.approveButton),
-                      style: _approveButtonStyle(theme),
+                      style: approveButtonStyle(theme),
                     ),
                     FilledButton.icon(
                       onPressed: onReject,
                       icon: const Icon(Icons.close, size: 18),
                       label: Text(l10n.rejectButton),
-                      style: _rejectButtonStyle(theme),
+                      style: rejectButtonStyle(theme),
                     ),
                   ],
                 ),
@@ -636,13 +592,13 @@ class _PendingTipCard extends StatelessWidget {
                       onPressed: onApprove,
                       icon: const Icon(Icons.check, size: 18),
                       label: Text(l10n.approveButton),
-                      style: _approveButtonStyle(theme),
+                      style: approveButtonStyle(theme),
                     ),
                     FilledButton.icon(
                       onPressed: onDecline,
                       icon: const Icon(Icons.close, size: 18),
                       label: Text(l10n.declineButton),
-                      style: _rejectButtonStyle(theme),
+                      style: rejectButtonStyle(theme),
                     ),
                   ],
                 ),
@@ -655,56 +611,19 @@ class _PendingTipCard extends StatelessWidget {
   }
 }
 
-class _PendingFeedbackCard extends StatefulWidget {
+class _PendingFeedbackCard extends StatelessWidget {
   final FeedbackItem item;
-  final Map<int, List<FeedbackAttachment>> attachments;
-  final int adminId;
-  final Future<void> Function(String body) onReply;
-  final VoidCallback onMarkReviewed;
-  final VoidCallback onDismiss;
+  final VoidCallback onTap;
 
-  const _PendingFeedbackCard({
-    required this.item,
-    required this.attachments,
-    required this.adminId,
-    required this.onReply,
-    required this.onMarkReviewed,
-    required this.onDismiss,
-  });
-
-  @override
-  State<_PendingFeedbackCard> createState() => _PendingFeedbackCardState();
-}
-
-class _PendingFeedbackCardState extends State<_PendingFeedbackCard> {
-  final _replyCtrl = TextEditingController();
-  bool _sending = false;
-
-  @override
-  void dispose() {
-    _replyCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    final body = _replyCtrl.text.trim();
-    if (body.isEmpty) return;
-    setState(() => _sending = true);
-    await widget.onReply(body);
-    if (mounted) {
-      _replyCtrl.clear();
-      setState(() => _sending = false);
-    }
-  }
+  const _PendingFeedbackCard({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = context.l10n;
-    final item = widget.item;
     final submitter = item.submitterUsername ?? l10n.feedbackUnknownUser;
     return Card(
-      child: ExpansionTile(
+      child: ListTile(
+        onTap: onTap,
         title: Text(item.firstMessage?.body ?? '',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -718,58 +637,7 @@ class _PendingFeedbackCardState extends State<_PendingFeedbackCard> {
                 label: Text(l10n.feedbackAwaitingUser),
                 visualDensity: VisualDensity.compact,
               )
-            : null,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FeedbackMessageList(
-                  thread: item,
-                  attachments: widget.attachments,
-                  viewerId: widget.adminId,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _replyCtrl,
-                  minLines: 2,
-                  maxLines: 5,
-                  maxLength: 2000,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(
-                    hintText: l10n.feedbackAdminReplyHint,
-                    border: const OutlineInputBorder(),
-                    counterText: '',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                OverflowBar(
-                  spacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: _sending ? null : _send,
-                      icon: const Icon(Icons.send, size: 18),
-                      label: Text(l10n.feedbackSendReply),
-                    ),
-                    FilledButton.icon(
-                      onPressed: widget.onMarkReviewed,
-                      icon: const Icon(Icons.check, size: 18),
-                      label: Text(l10n.markReviewedButton),
-                      style: _approveButtonStyle(theme),
-                    ),
-                    FilledButton.icon(
-                      onPressed: widget.onDismiss,
-                      icon: const Icon(Icons.close, size: 18),
-                      label: Text(l10n.dismissButton),
-                      style: _rejectButtonStyle(theme),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+            : const Icon(Icons.chevron_right),
       ),
     );
   }
