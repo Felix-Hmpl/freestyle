@@ -6,6 +6,7 @@ class FeedbackItem {
   final DateTime createdAt;
   final DateTime lastMessageAt;
   final DateTime? userLastReadAt;
+  final DateTime? adminLastReadAt;
   final List<FeedbackMessage> messages;
 
   const FeedbackItem({
@@ -16,6 +17,7 @@ class FeedbackItem {
     required this.createdAt,
     required this.lastMessageAt,
     this.userLastReadAt,
+    this.adminLastReadAt,
     this.messages = const [],
   });
 
@@ -29,6 +31,22 @@ class FeedbackItem {
 
   bool get hasUnread =>
       userLastReadAt == null || lastMessageAt.isAfter(userLastReadAt!);
+
+  /// Admins share one read marker; closed threads need no attention.
+  bool get hasUnreadForAdmin =>
+      !isClosed &&
+      (adminLastReadAt == null || lastMessageAt.isAfter(adminLastReadAt!));
+
+  /// Other people's messages newer than the viewer's read marker.
+  Set<int> unseenMessageIds({required bool asAdmin, required int? viewerId}) {
+    final readAt = asAdmin ? adminLastReadAt : userLastReadAt;
+    return {
+      for (final m in messages)
+        if (m.authorId != viewerId &&
+            (readAt == null || m.createdAt.isAfter(readAt)))
+          m.id,
+    };
+  }
 
   FeedbackMessage? get firstMessage => messages.isEmpty ? null : messages.first;
 
@@ -67,6 +85,9 @@ class FeedbackItem {
       userLastReadAt: json['user_last_read_at'] == null
           ? null
           : DateTime.parse(json['user_last_read_at'] as String),
+      adminLastReadAt: json['admin_last_read_at'] == null
+          ? null
+          : DateTime.parse(json['admin_last_read_at'] as String),
       messages: messages,
     );
   }

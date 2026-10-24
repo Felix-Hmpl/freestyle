@@ -11,6 +11,7 @@ create table feedback (
                       check (status in ('new', 'answered', 'reviewed', 'dismissed')),
   created_at        timestamptz not null default now(),
   user_last_read_at timestamptz,
+  admin_last_read_at timestamptz,
   last_message_at   timestamptz not null default now()
 );
 

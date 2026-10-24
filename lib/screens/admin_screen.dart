@@ -632,12 +632,23 @@ class _PendingFeedbackCard extends StatelessWidget {
           '${l10n.feedbackFrom(submitter)} · '
           '${l10n.submittedDate(formatShortDate(item.createdAt))}',
         ),
-        trailing: item.isAwaitingUser
-            ? Chip(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (item.hasUnreadForAdmin) ...[
+              Icon(Icons.circle,
+                  size: 12, color: Theme.of(context).colorScheme.error),
+              const SizedBox(width: 8),
+            ],
+            if (item.isAwaitingUser)
+              Chip(
                 label: Text(l10n.feedbackAwaitingUser),
                 visualDensity: VisualDensity.compact,
               )
-            : const Icon(Icons.chevron_right),
+            else
+              const Icon(Icons.chevron_right),
+          ],
+        ),
       ),
     );
   }

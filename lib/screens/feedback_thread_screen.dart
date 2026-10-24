@@ -51,7 +51,11 @@ class _FeedbackThreadScreenState extends State<FeedbackThreadScreen>
     final profile = await AuthService.getCurrentProfile();
     final thread = await FeedbackService.getThread(widget.feedbackId);
     final attachments = await FeedbackService.signAttachments([thread]);
-    if (!widget.adminMode && thread.hasUnread) {
+    final unseen = thread.unseenMessageIds(
+        asAdmin: widget.adminMode, viewerId: profile?.intId);
+    final needsRead =
+        widget.adminMode ? thread.hasUnreadForAdmin : thread.hasUnread;
+    if (needsRead) {
       try {
         await FeedbackService.markRead(thread.id);
       } catch (e) {
@@ -62,6 +66,7 @@ class _FeedbackThreadScreenState extends State<FeedbackThreadScreen>
       thread: thread,
       attachments: attachments,
       viewerId: profile?.intId,
+      unseenIds: unseen,
     );
   }
 
@@ -162,6 +167,7 @@ class _FeedbackThreadScreenState extends State<FeedbackThreadScreen>
                       thread: view.thread,
                       attachments: view.attachments,
                       viewerId: view.viewerId,
+                      unseenIds: view.unseenIds,
                     ),
                   ],
                 ),
@@ -196,11 +202,13 @@ class _ThreadView {
   final FeedbackItem thread;
   final Map<int, List<FeedbackAttachment>> attachments;
   final int? viewerId;
+  final Set<int> unseenIds;
 
   const _ThreadView({
     required this.thread,
     required this.attachments,
     this.viewerId,
+    this.unseenIds = const {},
   });
 }
 

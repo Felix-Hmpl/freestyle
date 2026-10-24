@@ -178,3 +178,4 @@ grant execute on function get_trick_vote_stats(integer) to anon, authenticated;
 grant execute on function submit_feedback(text, text[]) to authenticated;
 grant execute on function mark_feedback_read(integer) to authenticated;
 grant execute on function unread_feedback_count() to authenticated;
+grant execute on function admin_unread_feedback_count() to authenticated;

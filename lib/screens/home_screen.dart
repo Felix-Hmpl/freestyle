@@ -57,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // the import instead of making them find the banner again.
   bool _legacyImportPending = false;
   int _unreadFeedback = 0;
+  int _adminUnreadFeedback = 0;
 
   @override
   void initState() {
@@ -133,6 +134,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final profile = await profileFuture;
       final userTricks = await userTricksFuture;
       final unreadFeedback = profile == null ? 0 : await _unreadFeedbackCount();
+      final adminUnreadFeedback =
+          profile?.canEditTricks == true ? await _adminUnreadFeedbackCount() : 0;
       final consistencyMap = {
         for (final ut in userTricks) ut.trickId: ut.consistency
       };
@@ -147,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _tricks = tricks;
           _profile = profile;
           _unreadFeedback = unreadFeedback;
+          _adminUnreadFeedback = adminUnreadFeedback;
           _consistencyMap = consistencyMap;
           _variationCounts = variationCounts;
           _initialLoading = false;
@@ -173,6 +177,15 @@ class _HomeScreenState extends State<HomeScreen> {
       return await FeedbackService.unreadCount();
     } catch (e) {
       debugPrint('Unread feedback count failed: $e');
+      return 0;
+    }
+  }
+
+  Future<int> _adminUnreadFeedbackCount() async {
+    try {
+      return await FeedbackService.adminUnreadCount();
+    } catch (e) {
+      debugPrint('Admin unread feedback count failed: $e');
       return 0;
     }
   }
@@ -308,10 +321,17 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           if (_profile?.canEditTricks == true)
-            IconButton(
-              icon: const Icon(Icons.admin_panel_settings_outlined),
-              tooltip: l10n.adminLabel,
-              onPressed: () => context.push('/admin'),
+            Badge(
+              isLabelVisible: _adminUnreadFeedback > 0,
+              label: Text(_adminUnreadFeedback.toString()),
+              child: IconButton(
+                icon: const Icon(Icons.admin_panel_settings_outlined),
+                tooltip: l10n.adminLabel,
+                onPressed: () async {
+                  await context.push<void>('/admin');
+                  _load();
+                },
+              ),
             ),
           Badge(
             isLabelVisible: _filter.isActive,

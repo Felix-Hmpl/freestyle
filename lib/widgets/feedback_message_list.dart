@@ -11,11 +11,15 @@ class FeedbackMessageList extends StatelessWidget {
   final Map<int, List<FeedbackAttachment>> attachments;
   final int? viewerId;
 
+  /// Messages to mark with a dot until the thread is read.
+  final Set<int> unseenIds;
+
   const FeedbackMessageList({
     super.key,
     required this.thread,
     this.attachments = const {},
     this.viewerId,
+    this.unseenIds = const {},
   });
 
   @override
@@ -30,6 +34,7 @@ class FeedbackMessageList extends StatelessWidget {
             fromOwner: thread.isFromOwner(thread.messages[i]),
             isMine: viewerId != null && thread.messages[i].authorId == viewerId,
             attachments: attachments[thread.messages[i].id] ?? const [],
+            unseen: unseenIds.contains(thread.messages[i].id),
           ),
         ],
       ],
@@ -42,12 +47,14 @@ class _FeedbackMessageBubble extends StatelessWidget {
   final bool fromOwner;
   final bool isMine;
   final List<FeedbackAttachment> attachments;
+  final bool unseen;
 
   const _FeedbackMessageBubble({
     required this.message,
     required this.fromOwner,
     required this.isMine,
     required this.attachments,
+    required this.unseen,
   });
 
   String _author(BuildContext context) {
@@ -97,6 +104,10 @@ class _FeedbackMessageBubble extends StatelessWidget {
                     style: theme.textTheme.labelSmall
                         ?.copyWith(color: theme.colorScheme.outline),
                   ),
+                  if (unseen) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.circle, size: 10, color: theme.colorScheme.error),
+                  ],
                 ],
               ),
               const SizedBox(height: 6),

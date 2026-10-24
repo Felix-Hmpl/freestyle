@@ -117,6 +117,11 @@ class FeedbackService {
     return (count as int?) ?? 0;
   }
 
+  static Future<int> adminUnreadCount() async {
+    final count = await _client.rpc('admin_unread_feedback_count');
+    return (count as int?) ?? 0;
+  }
+
   static Future<String> getAttachmentUrl(String path) async {
     return _client.storage.from(_bucket).createSignedUrl(path, 3600);
   }

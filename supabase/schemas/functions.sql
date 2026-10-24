@@ -70,7 +70,9 @@ end;
 $$;
 
 -- A new message hands its thread to the other side: the owner's messages wait
--- on an admin, everyone else's wait on the owner. Closed threads keep their
+-- on an admin, everyone else's wait on the owner. The sender has seen their own
+-- side, so that side's read marker moves up to the message. Admins share one
+-- marker: any admin opening a thread clears it for all. Closed threads keep their
 -- status. Runs as definer because users have no update grant on feedback.
 create or replace function bump_feedback_thread()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -90,7 +92,11 @@ begin
       user_last_read_at = case
                             when from_owner then new.created_at
                             else user_last_read_at
-                          end
+                          end,
+      admin_last_read_at = case
+                             when from_owner then admin_last_read_at
+                             else new.created_at
+                           end
   where id = new.feedback_id;
   return new;
 end;
@@ -100,6 +106,7 @@ create trigger feedback_messages_bump_thread
   after insert on feedback_messages
   for each row execute function bump_feedback_thread();
 
+-- Marks the thread read for the caller: as its owner and/or as an admin.
 create or replace function mark_feedback_read(p_feedback_id integer)
 returns void language plpgsql security definer set search_path = public as $$
 begin
@@ -107,6 +114,10 @@ begin
   set user_last_read_at = now()
   where id = p_feedback_id
     and submitted_by = (select int_id from profiles where id = auth.uid());
+  update feedback
+  set admin_last_read_at = now()
+  where id = p_feedback_id
+    and exists (select 1 from profiles where id = auth.uid() and (flags & 1) = 1);
 end;
 $$;
 
@@ -118,6 +129,17 @@ returns integer language sql security definer set search_path = public as $$
   from feedback
   where submitted_by = (select int_id from profiles where id = auth.uid())
     and last_message_at > coalesce(user_last_read_at, '-infinity'::timestamptz);
+$$;
+
+-- Same for admins: open threads, from anyone, that no admin has opened since
+-- their last activity. A brand-new thread counts since nobody has read it.
+create or replace function admin_unread_feedback_count()
+returns integer language sql security definer set search_path = public as $$
+  select count(*)::integer
+  from feedback
+  where exists (select 1 from profiles where id = auth.uid() and (flags & 1) = 1)
+    and status in ('new', 'answered')
+    and last_message_at > coalesce(admin_last_read_at, '-infinity'::timestamptz);
 $$;
 
 -- Strip a deleted trick's id out of other tricks' reference arrays
