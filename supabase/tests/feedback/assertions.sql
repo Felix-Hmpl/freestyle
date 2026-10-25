@@ -4,6 +4,12 @@ language plpgsql as $$ begin
   if ok is distinct from true then raise exception 'FAIL: %', message; end if;
 end $$;
 
+-- The diff engine omits grants, so verify the explicit privilege supplement.
+select test_assert(
+  not has_function_privilege('anon', 'public.prepare_feedback_message()', 'execute')
+  and not has_function_privilege('authenticated', 'public.prepare_feedback_message()', 'execute'),
+  'trigger function is not directly executable by client roles');
+
 set role authenticated;
 set test.uid = '00000000-0000-0000-0000-000000000007';
 select submit_feedback('Owner thread');
