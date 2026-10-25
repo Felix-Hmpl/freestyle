@@ -69,6 +69,29 @@ begin
 end;
 $$;
 
+-- Serialize inserts with thread closure, including requests from stale clients.
+-- Generate timestamps after acquiring the lock; clients cannot forge unread state.
+create or replace function prepare_feedback_message()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  thread_status text;
+begin
+  select status into thread_status from feedback
+  where id = new.feedback_id for update;
+  if thread_status in ('reviewed', 'dismissed') then
+    raise exception 'feedback thread is closed' using errcode = '42501';
+  end if;
+  new.created_at := clock_timestamp();
+  return new;
+end;
+$$;
+
+create trigger feedback_messages_prepare
+  before insert on feedback_messages
+  for each row execute function prepare_feedback_message();
+
+revoke execute on function prepare_feedback_message() from public;
+
 -- A new message hands its thread to the other side: the owner's messages wait
 -- on an admin, everyone else's wait on the owner. The sender has seen their own
 -- side, so that side's read marker moves up to the message. Admins share one
